@@ -1,0 +1,87 @@
+version: 2
+
+models:
+  - name: campanhas_list
+    description: "Tabela consolidada de campanhas de marketing"
+    columns:
+      - name: campanha_id
+        description: "Chave primária da campanha"
+        tests:
+          - unique
+          - not_null
+
+      - name: nome_campanha
+        tests:
+          - not_null
+
+      - name: canal
+        description: "Canal de veiculação (Ex: Facebook, Google, Email)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Google', 'Facebook', 'Instagram', 'Email', 'LinkedIn', 'In-App Ads','Waze Ads','WhatsApp Business','App','TripAdvisor','Instagram Ads','Spotify Ads','YouTube Live','TikTok Ads','Pinterest','Google Ads','YouTube Ads','Push Notification','Google Display','Outdoor Digital','SMS','TikTok','LinkedIn Ads','Twitter (X)','Email Marketing','Portais Imobiliários','Apple Search Ads','Facebook Ads','Google Search','Pop-up Site','YouTube','Orgânico','Rádio Local','Criteo']
+              quote: true
+
+      - name: orcamento
+        description: "Valor total investido"
+        tests:
+          - not_null
+          # Teste extra: garante que o orçamento não seja negativo
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+      - name: data_inicio
+        tests:
+          - not_null
+
+      - name: data_fim
+        description: "Data de término da campanha"
+        # Teste de lógica: data_fim deve ser maior ou igual a data_inicio
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= data_inicio"
+
+  - name: campanhas_dias
+    description: "Tabela de métricas por período das campanhas"
+    columns:
+      - name: campanha_id
+        tests:
+          - not_null
+          # Garante que o ID existe na sua tabela principal (Chave Estrangeira)
+          - relationships:
+              to: ref('campanhas_list')
+              field: campanha_id
+
+      - name: data_inicio
+        tests:
+          - not_null
+
+      - name: data_fim
+        tests:
+          - not_null
+          # Garante que a data_fim não é menor que a data_inicio
+          - dbt_utils.expression_is_true:
+              expression: ">= data_inicio"
+
+      - name: total_dias
+        description: "Diferença em dias entre data_fim e data_inicio"
+        tests:
+          - not_null
+          # Garante que o cálculo da macro não resulte em dias negativos
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+      - name: margem_orcamento
+        description: "Cálculo de 10% de margem sobre o orçamento"
+        tests:
+          - not_null
+          # Garante que se o orçamento for > 0, a margem também deve ser > 0
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+    # Teste de Tabela: Garante que não haja duplicatas para o mesmo ID no mesmo período
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - campanha_id
+            - data_inicio

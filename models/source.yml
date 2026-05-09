@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: sources
+    database: dev
+    schema: public
+    tables:
+      - name: campanhas
+      - name: clientes
+      - name: clientes_campanhas
+      - name: custos_canal
